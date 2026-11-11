@@ -1,1 +1,355 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Akinator Inteligente</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      color: white;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(16px);
+      border-radius: 28px;
+      padding: 36px 28px;
+      width: 100%;
+      max-width: 460px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 25px 50px rgba(0,0,0,0.45);
+    }
+    .genie { font-size: 70px; margin-bottom: 8px; }
+    h1 {
+      font-size: 1.9rem;
+      margin-bottom: 6px;
+      background: linear-gradient(90deg, #ffd700, #ff9a00);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .sub { color: #aaa; font-size: 0.95rem; margin-bottom: 20px; }
+    #question {
+      font-size: 1.22rem;
+      line-height: 1.4;
+      min-height: 70px;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+    .btns { display: flex; flex-direction: column; gap: 12px; }
+    button {
+      border: none;
+      padding: 15px;
+      border-radius: 16px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: white;
+      transition: 0.2s;
+    }
+    button:hover { transform: scale(1.03); filter: brightness(1.1); }
+    .yes { background: linear-gradient(90deg, #00b09b, #96c93d); }
+    .no  { background: linear-gradient(90deg, #ff416c, #ff4b2b); }
+    .idk { background: linear-gradient(90deg, #4b6cb7, #182848); }
+    .restart { background: linear-gradient(90deg, #8e2de2, #4a00e0); }
+    .progress {
+      height: 6px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 10px;
+      margin-bottom: 12px;
+      overflow: hidden;
+    }
+    .bar {
+      height: 100%;
+      background: linear-gradient(90deg, #00c6ff, #0072ff);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .contador {
+      font-size: 0.85rem;
+      color: #888;
+      margin-bottom: 16px;
+    }
+    .result { display: none; }
+    .result.show { display: block; }
+    .hidden { display: none !important; }
+    .guess { font-size: 1.9rem; font-weight: 700; color: #ffd700; margin: 12px 0 8px; }
+    .desc { color: #bbb; margin-bottom: 16px; }
+    #foto {
+      width: 180px;
+      height: 180px;
+      object-fit: cover;
+      border-radius: 20px;
+      margin: 10px auto 20px;
+      border: 3px solid #ffd700;
+      display: block;
+      background: #222;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="genie">🧞‍♂️</div>
+    <h1>Akinator</h1>
+    <p class="sub">Versão mais inteligente</p>
 
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="contador" id="contador">Pergunta 0</div>
+
+    <div id="game">
+      <p id="question">Clique em Começar para eu tentar adivinhar</p>
+
+      <div class="btns" id="startArea">
+        <button class="yes" onclick="iniciar()">✨ Começar</button>
+      </div>
+
+      <div class="btns hidden" id="answerArea">
+        <button class="yes" onclick="responder(true)">✅ Sim</button>
+        <button class="no" onclick="responder(false)">❌ Não</button>
+        <button class="idk" onclick="responder(null)">🤷 Não sei</button>
+      </div>
+    </div>
+
+    <div id="result" class="result">
+      <p>Eu acho que você pensou em:</p>
+      <img id="foto" src="" alt="Foto" onerror="this.style.display='none'">
+      <div class="guess" id="nome"></div>
+      <div class="desc" id="descricao"></div>
+      <div class="btns">
+        <button class="yes" onclick="acertou()">🎉 Acertou!</button>
+        <button class="no" onclick="errou()">😢 Errou</button>
+        <button class="restart" onclick="reiniciar()">🔄 Jogar de novo</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const pessoas = [
+      { nome: "Anitta", desc: "Cantora", real:1, homem:0, vivo:1, br:1, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:1, img: "https://upload.wikimedia.org/wikipedia/commons/a/a1/Anitta_in_2024.jpg" },
+      { nome: "Xuxa", desc: "Apresentadora", real:1, homem:0, vivo:1, br:1, esporte:0, cantor:1, politica:0, youtuber:0, ator:1, antigo:1, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/2/2e/Xuxa_Meneghel_in_2017.jpg" },
+      { nome: "Ivete Sangalo", desc: "Cantora", real:1, homem:0, vivo:1, br:1, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/5/5e/Ivete_Sangalo_2019.jpg" },
+      { nome: "Gisele Bündchen", desc: "Modelo", real:1, homem:0, vivo:1, br:1, esporte:0, cantor:0, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/4/4e/Gisele_Bundchen_2019.jpg" },
+      { nome: "Marília Mendonça", desc: "Cantora", real:1, homem:0, vivo:0, br:1, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/3/3e/Marilia_Mendonca.jpg" },
+      { nome: "Juliette", desc: "Cantora e ex-BBB", real:1, homem:0, vivo:1, br:1, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/4/4a/Juliette_Freire.jpg" },
+      { nome: "Pocah", desc: "Cantora", real:1, homem:0, vivo:1, br:1, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:1, img: "https://upload.wikimedia.org/wikipedia/commons/9/9e/Pocah.jpg" },
+      { nome: "Luísa Sonza", desc: "Cantora", real:1, homem:0, vivo:1, br:1, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/3/3e/Luisa_Sonza.jpg" },
+      { nome: "Ludmilla", desc: "Cantora", real:1, homem:0, vivo:1, br:1, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:1, img: "" },
+      { nome: "Pabllo Vittar", desc: "Cantora", real:1, homem:0, vivo:1, br:1, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "" },
+      { nome: "Virginia Fonseca", desc: "Influencer", real:1, homem:0, vivo:1, br:1, esporte:0, cantor:0, politica:0, youtuber:1, ator:0, antigo:0, rap:0, funk:0, img: "" },
+      { nome: "Kéfera Buchmann", desc: "Youtuber e atriz", real:1, homem:0, vivo:1, br:1, esporte:0, cantor:0, politica:0, youtuber:1, ator:1, antigo:0, rap:0, funk:0, img: "" },
+      { nome: "Taylor Swift", desc: "Cantora", real:1, homem:0, vivo:1, br:0, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/b/b5/191125_Taylor_Swift_at_the_2019_American_Music_Awards.png" },
+      { nome: "Ariana Grande", desc: "Cantora", real:1, homem:0, vivo:1, br:0, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/7/7a/Ariana_Grande_at_the_2024_Grammys.png" },
+      { nome: "Beyoncé", desc: "Cantora", real:1, homem:0, vivo:1, br:0, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/1/17/Beyonce_at_Super_Bowl_XLVII_halftime_show.jpg" },
+      { nome: "Rihanna", desc: "Cantora", real:1, homem:0, vivo:1, br:0, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/c/c2/Rihanna_Fenty_2018.jpg" },
+      { nome: "Kim Kardashian", desc: "Influencer", real:1, homem:0, vivo:1, br:0, esporte:0, cantor:0, politica:0, youtuber:1, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/5/5e/Kim_Kardashian_2019.jpg" },
+      { nome: "Mulher-Maravilha", desc: "Heroína", real:0, homem:0, vivo:1, br:0, esporte:0, cantor:0, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/en/e/e0/Wonder_Woman.jpg" },
+      { nome: "Elsa", desc: "Personagem de Frozen", real:0, homem:0, vivo:1, br:0, esporte:0, cantor:0, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/en/5/5e/Elsa_Frozen.png" },
+
+      { nome: "Neymar", desc: "Jogador de futebol", real:1, homem:1, vivo:1, br:1, esporte:1, cantor:0, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/8/83/Neymar_Jr._with_Al_Hilal%2C_3_October_2023_-_03_%28cropped%29.jpg" },
+      { nome: "Pelé", desc: "Rei do futebol", real:1, homem:1, vivo:0, br:1, esporte:1, cantor:0, politica:0, youtuber:0, ator:0, antigo:1, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/5/54/Pele_by_John_Mathew_Smith.jpg" },
+      { nome: "Lula", desc: "Presidente", real:1, homem:1, vivo:1, br:1, esporte:0, cantor:0, politica:1, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/8/8a/Lula_-_foto_oficial_2023.jpg" },
+      { nome: "Bolsonaro", desc: "Ex-presidente", real:1, homem:1, vivo:1, br:1, esporte:0, cantor:0, politica:1, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/0/0c/Jair_Bolsonaro_2022.jpg" },
+      { nome: "Ayrton Senna", desc: "Piloto de F1", real:1, homem:1, vivo:0, br:1, esporte:1, cantor:0, politica:0, youtuber:0, ator:0, antigo:1, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/8/8c/Ayrton_Senna_12.jpg" },
+      { nome: "Felipe Neto", desc: "Youtuber", real:1, homem:1, vivo:1, br:1, esporte:0, cantor:0, politica:0, youtuber:1, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/4/4a/Felipe_Neto_2022.jpg" },
+      { nome: "Casimiro", desc: "Streamer", real:1, homem:1, vivo:1, br:1, esporte:0, cantor:0, politica:0, youtuber:1, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/9/9e/Casimiro.jpg" },
+      { nome: "Baco Exu do Blues", desc: "Rapper", real:1, homem:1, vivo:1, br:1, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:0, rap:1, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/2/2e/Baco_Exu_do_Blues.jpg" },
+      { nome: "MC Rick", desc: "Cantor de funk", real:1, homem:1, vivo:1, br:1, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:1, img: "mc-rick.png" },
+      { nome: "MC Cabelinho", desc: "Cantor de funk", real:1, homem:1, vivo:1, br:1, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:1, img: "https://upload.wikimedia.org/wikipedia/commons/8/8a/MC_Cabelinho.jpg" },
+      { nome: "Emicida", desc: "Rapper", real:1, homem:1, vivo:1, br:1, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:0, rap:1, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/8/8a/Emicida.jpg" },
+      { nome: "Djonga", desc: "Rapper", real:1, homem:1, vivo:1, br:1, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:0, rap:1, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/2/2e/Djonga.jpg" },
+      { nome: "Cristiano Ronaldo", desc: "Jogador português", real:1, homem:1, vivo:1, br:0, esporte:1, cantor:0, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/8/8c/Cristiano_Ronaldo_2018.jpg" },
+      { nome: "Messi", desc: "Jogador argentino", real:1, homem:1, vivo:1, br:0, esporte:1, cantor:0, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/c/c1/Lionel_Messi_20180626.jpg" },
+      { nome: "Elon Musk", desc: "Empresário", real:1, homem:1, vivo:1, br:0, esporte:0, cantor:0, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/3/34/Elon_Musk_Royal_Society_%28crop2%29.jpg" },
+      { nome: "Michael Jackson", desc: "Cantor", real:1, homem:1, vivo:0, br:0, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:1, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/3/31/Michael_Jackson_in_1984.jpg" },
+      { nome: "Leonardo DiCaprio", desc: "Ator", real:1, homem:1, vivo:1, br:0, esporte:0, cantor:0, politica:0, youtuber:0, ator:1, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/4/46/Leonardo_Dicaprio_Cannes_2019.jpg" },
+      { nome: "Tom Cruise", desc: "Ator", real:1, homem:1, vivo:1, br:0, esporte:0, cantor:0, politica:0, youtuber:0, ator:1, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/3/33/Tom_Cruise_by_Gage_Skidmore_2.jpg" },
+      { nome: "Justin Bieber", desc: "Cantor", real:1, homem:1, vivo:1, br:0, esporte:0, cantor:1, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/d/da/Justin_Bieber_in_2015.jpg" },
+      { nome: "Homem-Aranha", desc: "Herói da Marvel", real:0, homem:1, vivo:1, br:0, esporte:0, cantor:0, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/9/90/Spiderman.jpg" },
+      { nome: "Batman", desc: "Herói da DC", real:0, homem:1, vivo:1, br:0, esporte:0, cantor:0, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/commons/1/17/Batman_Ben_Affleck.jpg" },
+      { nome: "Harry Potter", desc: "Personagem", real:0, homem:1, vivo:1, br:0, esporte:0, cantor:0, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/en/d/d7/Harry_Potter_character_poster.jpg" },
+      { nome: "Goku", desc: "Personagem de Dragon Ball", real:0, homem:1, vivo:1, br:0, esporte:0, cantor:0, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "" },
+      { nome: "Naruto", desc: "Personagem de anime", real:0, homem:1, vivo:1, br:0, esporte:0, cantor:0, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "" },
+      { nome: "Luffy", desc: "Personagem de One Piece", real:0, homem:1, vivo:1, br:0, esporte:0, cantor:0, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "" },
+      { nome: "Bob Esponja", desc: "Personagem de desenho", real:0, homem:1, vivo:1, br:0, esporte:0, cantor:0, politica:0, youtuber:0, ator:0, antigo:0, rap:0, funk:0, img: "https://upload.wikimedia.org/wikipedia/en/3/3b/SpongeBob_SquarePants_character.svg" },
+    ];
+
+    const perguntas = [
+      { texto: "Essa pessoa é real ou é um personagem de ficção?", chave: "real" },
+      { texto: "É um homem?", chave: "homem" },
+      { texto: "Essa pessoa ainda está viva?", chave: "vivo" },
+      { texto: "É brasileiro(a)?", chave: "br" },
+      { texto: "É esportista (jogador, atleta, piloto...)?", chave: "esporte" },
+      { texto: "É cantor(a) ou faz música?", chave: "cantor" },
+      { texto: "É político(a)?", chave: "politica" },
+      { texto: "É youtuber, streamer ou influenciador digital?", chave: "youtuber" },
+      { texto: "É ator/atriz ou apresentador(a)?", chave: "ator" },
+      { texto: "Essa pessoa ficou famosa há mais de 25 anos?", chave: "antigo" },
+      { texto: "É rapper?", chave: "rap" },
+      { texto: "É cantor(a) de funk?", chave: "funk" },
+    ];
+
+    let scores = {};
+    let usadas = [];
+    let total = 0;
+    let ultimaChave = null;
+    const MINIMO = 10;
+    const LIMITE_CONFIANCA = 25; // Só chuta se a diferença for grande
+
+    function iniciar() {
+      scores = {};
+      pessoas.forEach(p => scores[p.nome] = 50); // Todo mundo começa com 50 pontos
+      usadas = [];
+      total = 0;
+      ultimaChave = null;
+
+      document.getElementById("startArea").classList.add("hidden");
+      document.getElementById("answerArea").classList.remove("hidden");
+      document.getElementById("result").classList.remove("show");
+      document.getElementById("game").classList.remove("hidden");
+      document.getElementById("contador").innerText = "Pergunta 0";
+      document.getElementById("bar").style.width = "0%";
+      document.getElementById("foto").style.display = "block";
+
+      proxima();
+    }
+
+    function getTopCandidatos() {
+      return Object.entries(scores)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([nome]) => pessoas.find(p => p.nome === nome));
+    }
+
+    function proxima() {
+      // Verifica se já pode chutar com confiança
+      const ranking = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+      if (total >= MINIMO && ranking.length >= 2) {
+        const diff = ranking[0][1] - ranking[1][1];
+        if (diff >= LIMITE_CONFIANCA) {
+          mostrar();
+          return;
+        }
+      }
+
+      if (total >= 22) {
+        mostrar();
+        return;
+      }
+
+      // Escolhe a melhor pergunta baseado nos candidatos atuais
+      const candidatos = getTopCandidatos();
+      let melhor = null;
+      let melhorScore = -1;
+
+      for (let p of perguntas) {
+        if (usadas.includes(p.chave)) continue;
+
+        let sim = 0, nao = 0;
+        for (let c of candidatos) {
+          if (c[p.chave] === 1) sim++;
+          else nao++;
+        }
+
+        // Prefere perguntas que dividem bem os candidatos restantes
+        const score = Math.min(sim, nao) * 2 + (sim + nao);
+        if (score > melhorScore) {
+          melhorScore = score;
+          melhor = p;
+        }
+      }
+
+      if (melhor) {
+        usadas.push(melhor.chave);
+        ultimaChave = melhor.chave;
+        document.getElementById("question").innerText = melhor.texto;
+      } else {
+        mostrar();
+        return;
+      }
+
+      total++;
+      document.getElementById("contador").innerText = `Pergunta ${total}`;
+      document.getElementById("bar").style.width = Math.min((total / 18) * 100, 95) + "%";
+    }
+
+    function responder(valor) {
+      if (ultimaChave && valor !== null) {
+        // Pontuação inteligente
+        const pesoBase = ultimaChave === "homem" ? 18 : 8;
+
+        pessoas.forEach(p => {
+          if (valor === true) {
+            if (p[ultimaChave] === 1) {
+              scores[p.nome] += pesoBase;
+            } else {
+              scores[p.nome] -= (pesoBase + 6);
+            }
+          } else {
+            if (p[ultimaChave] === 0) {
+              scores[p.nome] += pesoBase;
+            } else {
+              scores[p.nome] -= (pesoBase + 6);
+            }
+          }
+        });
+      }
+      proxima();
+    }
+
+    function mostrar() {
+      document.getElementById("game").classList.add("hidden");
+      document.getElementById("result").classList.add("show");
+      document.getElementById("bar").style.width = "100%";
+      document.getElementById("contador").innerText = `Fez ${total} perguntas`;
+
+      const ranking = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+      const melhorNome = ranking[0][0];
+      const pessoa = pessoas.find(p => p.nome === melhorNome);
+
+      if (pessoa) {
+        document.getElementById("nome").innerText = pessoa.nome;
+        document.getElementById("descricao").innerText = pessoa.desc;
+        if (pessoa.img) {
+          document.getElementById("foto").src = pessoa.img;
+          document.getElementById("foto").style.display = "block";
+        } else {
+          document.getElementById("foto").style.display = "none";
+        }
+      } else {
+        document.getElementById("nome").innerText = "Não consegui";
+        document.getElementById("descricao").innerText = "Tente de novo";
+        document.getElementById("foto").style.display = "none";
+      }
+    }
+
+    function acertou() {
+      document.getElementById("nome").innerText = "Acertei! 🎉";
+      document.getElementById("descricao").innerText = "Boa!";
+      setTimeout(reiniciar, 2000);
+    }
+
+    function errou() {
+      document.getElementById("nome").innerText = "Errei 😅";
+      document.getElementById("descricao").innerText = "Vou tentar melhorar";
+      setTimeout(reiniciar, 2000);
+    }
+
+    function reiniciar() {
+      document.getElementById("result").classList.remove("show");
+      document.getElementById("game").classList.remove("hidden");
+      document.getElementById("startArea").classList.remove("hidden");
+      document.getElementById("answerArea").classList.add("hidden");
+      document.getElementById("question").innerText = "Clique em Começar para eu tentar adivinhar";
+      document.getElementById("bar").style.width = "0%";
+      document.getElementById("contador").innerText = "Pergunta 0";
+    }
+  </script>
+</body>
+</html>
